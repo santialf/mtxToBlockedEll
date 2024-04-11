@@ -1,5 +1,3 @@
-#include <cuda_runtime_api.h> // cudaMalloc, cudaMemcpy, etc.
-#include <cusparse.h>         // cusparseSpMM
 #include <stdio.h>            // printf
 #include <stdlib.h>           // EXIT_FAILURE
 #include <zlib.h>
@@ -7,6 +5,7 @@
 
 #include <string.h>
 #include <time.h>
+#include <iostream>
 
 #include "mmio.c"
 #include "smsh.c"
@@ -51,9 +50,6 @@ int *createBlockIndex(int *rowPtr, int *colIndex, int num_rows, int block_size, 
     long int mb = num_rows/block_size, nb = ell_cols/block_size;
     if (num_rows % block_size != 0)
         mb++;
-
-    printf("%ld\n", nb*mb);
-    printf("%ld\n", (long int)nb*mb);
 
     int* hA_columns = new int[nb*mb]();
     int ctr = 0;
@@ -258,6 +254,13 @@ int main(int argc, char *argv[]) {
     int A_num_blocks = A_ell_cols * A_num_rows / (A_ell_blocksize * A_ell_blocksize);
     int *hA_columns = createBlockIndex(rowPtr, colIndex, A_num_rows, A_ell_blocksize, A_ell_cols);
     float *hA_values = createValueIndex(rowPtr, colIndex, values, hA_columns, A_num_rows, A_ell_blocksize, A_ell_cols);
+
+    float mem_ids = (float) A_num_blocks * sizeof(int) / 1000000000;
+    float mem_values = (float) A_ell_cols * A_num_rows * sizeof(float) / 1000000000;
+    std::cout << "Memory used: " << std::endl;
+    std::cout << "Block indexes: " << mem_ids << " Gbytes" << std::endl;
+    std::cout << "Block values: " << mem_values << " Gbytes" << std::endl;
+    std::cout << "Total: " << mem_ids + mem_values << " Gbytes" << std::endl;
 
     delete[] rowPtr;
     delete[] colIndex;
