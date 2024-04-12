@@ -25,20 +25,21 @@ int findMaxNnz(int *rowPtr, int *colIndex, int num_rows, int block_size) {
 
     int max = 0;
     int num_blocks = num_rows / block_size;
-    if (num_rows % block_size != 0)
-        num_blocks++;
 
-    for(int i=0; i < num_rows; i++) {
-        int flag=0;
-		int number_of_cols = 0;
-		for(int j=rowPtr[i]; j<rowPtr[i+1]; j++) {
-            if (flag <= colIndex[j]) {
-                flag = (colIndex[j]/block_size) * block_size + block_size;
-                number_of_cols++;
-            }
+    std::set<int> mySet;
+
+    for(int i=0; i < num_blocks; i++) {
+
+        for (int j = 0; j<block_size; j++) {
+            int id = block_size*i+j;
+            
+            for(int k=rowPtr[id]; k<rowPtr[id+1]; k++)
+                mySet.insert(colIndex[k]/block_size);
+            
+            if (mySet.size() > max)
+                max = mySet.size();
         }
-        if (number_of_cols > max)
-            max = number_of_cols;
+        mySet.clear();
 	}
 
     return max*block_size;
@@ -51,10 +52,10 @@ int *createBlockIndex(int *rowPtr, int *colIndex, int num_rows, int block_size, 
     if (num_rows % block_size != 0)
         mb++;
 
-    int* hA_columns = new int[nb*mb]();
+    int* hA_columns = new int[(long int)nb*mb]();
     int ctr = 0;
 
-    memset(hA_columns, -1, nb * mb * sizeof(int));
+    memset(hA_columns, -1, (long int)nb * mb * sizeof(int));
     std::set<int> mySet;
 
     /* Goes through the blocks of the matrix of block_size */
@@ -249,11 +250,27 @@ int main(int argc, char *argv[]) {
     fclose(f);
     /*******************************************************************/
 
-    int A_ell_blocksize = 2;
-    int A_ell_cols = findMaxNnz(rowPtr, colIndex, A_num_rows, A_ell_blocksize);
+    int A_ell_blocksize = 16;
+
+    int * rowPtr_pad;
+    int remainder = A_num_rows % A_ell_blocksize;
+    if (remainder != 0) {
+        A_num_rows = A_num_rows + (A_ell_blocksize - remainder);
+        A_num_cols = A_num_cols + (A_ell_blocksize - remainder);
+        rowPtr_pad = new int[A_num_rows + 1];
+        for (int i=0; i<A_num_rows - (A_ell_blocksize - remainder); i++)
+            rowPtr_pad[i] = rowPtr[i];
+        for (int j=A_num_rows - (A_ell_blocksize - remainder); j<A_num_rows + 1; j++)
+            rowPtr_pad[j] = nz;
+        delete[] rowPtr;
+    } else {
+        rowPtr_pad = rowPtr;
+    }  
+
+    int A_ell_cols = findMaxNnz(rowPtr_pad, colIndex, A_num_rows, A_ell_blocksize);
     int A_num_blocks = A_ell_cols * A_num_rows / (A_ell_blocksize * A_ell_blocksize);
-    int *hA_columns = createBlockIndex(rowPtr, colIndex, A_num_rows, A_ell_blocksize, A_ell_cols);
-    float *hA_values = createValueIndex(rowPtr, colIndex, values, hA_columns, A_num_rows, A_ell_blocksize, A_ell_cols);
+    int *hA_columns = createBlockIndex(rowPtr_pad, colIndex, A_num_rows, A_ell_blocksize, A_ell_cols);
+    float *hA_values = createValueIndex(rowPtr_pad, colIndex, values, hA_columns, A_num_rows, A_ell_blocksize, A_ell_cols);
 
     float mem_ids = (float) A_num_blocks * sizeof(int) / 1000000000;
     float mem_values = (float) A_ell_cols * A_num_rows * sizeof(float) / 1000000000;
@@ -262,7 +279,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Block values: " << mem_values << " Gbytes" << std::endl;
     std::cout << "Total: " << mem_ids + mem_values << " Gbytes" << std::endl;
 
-    delete[] rowPtr;
+    delete[] rowPtr_pad;
     delete[] colIndex;
     delete[] values;
     delete[] hA_columns;
