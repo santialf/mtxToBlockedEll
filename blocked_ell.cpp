@@ -31,7 +31,7 @@ int findMaxNnz(int *rowPtr, int *colIndex, int num_rows, int block_size) {
     for(int i=0; i < num_blocks; i++) {
 
         for (int j = 0; j<block_size; j++) {
-            int id = block_size*i+j;
+            long int id = (long int) block_size*i+j;
             
             for(int k=rowPtr[id]; k<rowPtr[id+1]; k++)
                 mySet.insert(colIndex[k]/block_size);
@@ -250,7 +250,7 @@ int main(int argc, char *argv[]) {
     fclose(f);
     /*******************************************************************/
 
-    int A_ell_blocksize = 16;
+    int A_ell_blocksize = 8;
 
     int * rowPtr_pad;
     int remainder = A_num_rows % A_ell_blocksize;
@@ -268,10 +268,15 @@ int main(int argc, char *argv[]) {
     }  
 
     int A_ell_cols = findMaxNnz(rowPtr_pad, colIndex, A_num_rows, A_ell_blocksize);
-    int A_num_blocks = A_ell_cols * A_num_rows / (A_ell_blocksize * A_ell_blocksize);
+    long int A_num_blocks = (long int) A_ell_cols * A_num_rows / (A_ell_blocksize * A_ell_blocksize);
     int *hA_columns = createBlockIndex(rowPtr_pad, colIndex, A_num_rows, A_ell_blocksize, A_ell_cols);
     float *hA_values = createValueIndex(rowPtr_pad, colIndex, values, hA_columns, A_num_rows, A_ell_blocksize, A_ell_cols);
 
+
+    /* Active blocks */
+    std::cout << "Number of blocks: " << A_num_blocks << std::endl;
+
+    /* Memory used */
     float mem_ids = (float) A_num_blocks * sizeof(int) / 1000000000;
     float mem_values = (float) A_ell_cols * A_num_rows * sizeof(float) / 1000000000;
     std::cout << "Memory used: " << std::endl;
