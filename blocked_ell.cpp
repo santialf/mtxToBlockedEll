@@ -282,7 +282,8 @@ int main(int argc, char *argv[]) {
     std::cout << "Memory used: " << std::endl;
     std::cout << "Block indexes: " << mem_ids << " Gbytes" << std::endl;
     std::cout << "Block values: " << mem_values << " Gbytes" << std::endl;
-    std::cout << "Total: " << mem_ids + mem_values << " Gbytes" << std::endl;
+    std::cout << argv[1] <<" Total (Gbytes):\t" << mem_ids + mem_values << std::endl;
+    std::cout << argv[1] << " Num blocks:\t" << A_num_blocks << std::endl;
 
     delete[] rowPtr_pad;
     delete[] colIndex;
